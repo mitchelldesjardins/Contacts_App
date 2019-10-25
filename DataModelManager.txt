@@ -1,0 +1,244 @@
+//
+//  DataModelManager.swift
+//  MyFriends
+//
+//  Created by Mitch on 2019-10-01.
+//  Copyright © 2019 Mitch. All rights reserved.
+//
+
+import Foundation
+import UIKit
+
+class DataModelManager {
+    
+    var myFriends = MyFriends()
+    
+   // private var Taylor: Friend
+   // private var Eric: Friend
+   // private var Glenn: Friend
+   // private var Pekoe: Friend
+   // private var Rooibos: Friend
+   // private var friendList : MyFriends
+    
+    init() {
+        loadData()
+        
+        if myFriends.data.count == 0{
+            myFriends.data.append(Friend(id: 0, givenName: "Taylor", familyName: "Li", age: 19, city: "Scarborough", imageName: "4wx8EcIA_400x400"))
+            myFriends.data.append(Friend(id: 1, givenName: "Eric", familyName: "Rabiner", age: 23, city: "Richmond Hill", imageName: ""))
+            myFriends.data.append(Friend(id: 2, givenName: "Glenn", familyName: "Garcia", age: 35, city: "Manila", imageName: ""))
+            myFriends.data.append(Friend(id: 3, givenName: "Pekoe", familyName: "Desjardins", age: 2, city: "Ottawa", imageName: ""))
+            myFriends.data.append(Friend(id: 4, givenName: "Rooibos", familyName: "Desjardins", age: 1, city: "Toronto", imageName: ""))
+            
+            myFriends.count = myFriends.data.count
+        }
+        
+    }
+    
+    func FriendsGet() -> MyFriends {
+        return myFriends
+    }
+    
+    private func nextFriendId() -> Int {
+        return myFriends.data.reduce(0, {max($0, $1.id)}) + 1
+    }
+    
+    private func friendIndexById(_ id: Int) -> Int? {
+        return myFriends.data.firstIndex(where: {$0.id == id})
+    }
+    
+    private func appBundlePath() -> String? {
+        
+        return Bundle.main.path(forResource: "data-friends", ofType: "json")
+    }
+    
+    private func appDocumentsPath() -> URL? {
+        
+        return FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask)
+            .first?
+            .appendingPathComponent("data-friends.json")
+    }
+    
+    func saveData() {
+        
+        // Create and configure a JSON encoder
+        let encoder = JSONEncoder()
+        
+        // Choose the desired date decoding strategy
+        encoder.dateEncodingStrategy = .iso8601
+        
+        if let encodedData = try? encoder.encode(self.myFriends) {
+            do {
+                try encodedData.write(to: appDocumentsPath()!)
+            }
+            catch {
+                print("Failed to write app data: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func loadData() {
+        
+        // Attempt to read data
+        //   First from the Documents folder
+        //   If not found there, then from the app bundle folder
+        //   If found there, immediately save the data to the Documents folder
+        
+        var appData = Data()
+        
+        if let path = appDocumentsPath() {
+            
+            // Path to documents does exist
+            
+            // Diagnostic
+            print(path.absoluteString)
+            
+            do {
+                appData = try Data(contentsOf: path)
+            }
+            catch {
+                print(error.localizedDescription)
+            }
+        }
+        else if let path = appBundlePath() {
+            
+            // Path to bundle does exist
+            
+            do {
+                appData = try Data(contentsOf: URL(fileURLWithPath: path))
+            }
+            catch {
+                print(error.localizedDescription)
+            }
+        }
+        
+        // Attempt to decode, but only if appData has something in it
+        if appData.count > 0 {
+            
+            // Create and configure a JSON decoder
+            let decoder = JSONDecoder()
+            // Choose the desired date decoding strategy
+            decoder.dateDecodingStrategy = .iso8601
+            
+            // Attempt to decode the data into a "...Package" object
+            do {
+                let result = try decoder.decode(MyFriends.self, from: appData)
+                // Publish the result
+                self.myFriends = result
+            }
+            catch {
+                print("Decode error", error)
+            }
+        }
+    }
+    
+    func friendById(_ id: Int) -> Friend? {
+        
+        // Search for matching identifier
+        return myFriends.data.first(where: {$0.id == id})
+    }
+    
+    func friendByName(_ name: String) -> Friend? {
+        
+        // Clean and prepare the name first
+        let cleanName = name.trimmingCharacters(in: .whitespaces).lowercased()
+        // Search for matching name
+        return myFriends.data.first(where: {$0.givenName.lowercased() == cleanName})
+    }
+    
+    func friendAdd(_ newItem: Friend) -> Friend? {
+        
+        // Make a copy of the incoming data, so that we can mutate it
+        // By default, function parameters are constants
+        // We declare it with "let" here, which means that
+        //   we can still mutate the local new item's values
+        let localNewItem = newItem
+
+        // Attempt to add the new item, by verifying non-null data
+        // Data should ALSO be validated in the user interface controller that gets the data from the user
+        // Doing it here too is done for code/data safety
+        if !newItem.givenName.isEmpty && !newItem.familyName.isEmpty && newItem.age > 0 && !newItem.city.isEmpty {
+            // Set the value of "id"
+            localNewItem.id = nextFriendId()
+            // Save it to the collection
+            myFriends.data.append(localNewItem)
+            myFriends.count = myFriends.data.count
+            myFriends.timestamp = Date()
+            
+            return myFriends.data.last
+        }
+        return nil
+    }
+    
+    func friendEdit(_ editedItem: Friend) -> Friend? {
+        
+        // Attempt to locate the item
+        if let index = myFriends.data.firstIndex(where: {$0.id == editedItem.id}) {
+            
+            // Attempt to update the existing item, by verifying non-null data
+            // Data should ALSO be validated in the user interface controller that gets the data from the user
+            // Doing it here too is done for code/data safety
+            if !editedItem.givenName.isEmpty && !editedItem.familyName.isEmpty && editedItem.age > 0 && !editedItem.city.isEmpty {
+                // Save it to the collection
+                myFriends.data[index] = editedItem
+                return myFriends.data[index]
+            }
+        }
+        return nil
+    }
+    
+    func friendDelete(_ id: Int) -> Bool {
+        
+        // Attempt to locate the item
+        if let item = friendIndexById(id) {
+            // Yes, has been located, so remove the item
+            myFriends.data.remove(at: item)
+            return true
+        }
+        return false
+    }
+    
+    func friendSortedById() -> [Friend] {
+        
+        // Sort the array; include a comparison function
+        let sortedFriend = myFriends.data.sorted(by: { (p1: Friend, p2: Friend) -> Bool in return p1.id < p2.id })
+        
+        return sortedFriend
+    }
+    
+    func friendSortedByName() -> [Friend] {
+        
+        // Sort the array; include a comparison function
+        let sortedFriend = myFriends.data.sorted(by: { (p1: Friend, p2: Friend) -> Bool in return p1.givenName.lowercased() < p2.givenName.lowercased() })
+        
+        return sortedFriend
+    }
+    
+    func loadImage(fileName: String) -> UIImage? {
+        let documentDirectory = FileManager.SearchPathDirectory.documentDirectory
+        let userDomainMask = FileManager.SearchPathDomainMask.userDomainMask
+        let paths = NSSearchPathForDirectoriesInDomains(documentDirectory, userDomainMask, true)
+        if let dirPath = paths.first {
+            let imageUrl = URL(fileURLWithPath: dirPath).appendingPathComponent(fileName)
+            let image = UIImage(contentsOfFile: imageUrl.path)
+            return image
+        }
+        return nil
+    }
+    
+    func saveImage(imageName: String, image: UIImage) {
+        guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let fileName = imageName
+        let fileUrl = documentsDirectory.appendingPathComponent(fileName)
+        guard let data = image.jpegData(compressionQuality: 1) else { return }
+        
+        do {
+            try data.write(to: fileUrl)
+        }
+        catch let error {
+            print("Error saving: \(error)")
+        }
+    }
+    
+}

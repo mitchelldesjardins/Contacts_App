@@ -1,0 +1,43 @@
+//
+//  ViewController.swift
+//  MyFriends
+//
+//  Created by Mitch on 2019-10-01.
+//  Copyright © 2019 Mitch. All rights reserved.
+//
+
+import UIKit
+
+class FriendScene: UIViewController {
+    
+    var indexPath: IndexPath!
+    var friend : Friend!
+    var m: DataModelManager!
+    
+    @IBOutlet weak var name: UILabel!
+    @IBOutlet weak var imageView: UIImageView!
+    @IBOutlet weak var lastName: UILabel!
+    @IBOutlet weak var age: UILabel!
+    @IBOutlet weak var city: UILabel!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view.
+        name.text = friend.givenName
+        lastName.text = friend.familyName
+        age.text = String(friend.age)
+        city.text = friend.city
+        
+        if friend.imageName == "" {
+            imageView.image = UIImage(named: "")
+        }
+        else{
+            let image = m.loadImage(fileName: friend.imageName)
+            imageView.image = image
+        }
+    }
+    
+    
+    
+}
+
